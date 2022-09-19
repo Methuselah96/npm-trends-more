@@ -1,34 +1,81 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import './App.css'
+import * as React from "react";
+import {
+  QueryClient,
+  QueryClientProvider,
+  useQuery,
+} from "@tanstack/react-query";
+import axios from "axios";
+import { AxisOptions, Chart } from "react-charts";
 
-function App() {
-  const [count, setCount] = useState(0)
+const queryClient = new QueryClient();
 
+export default function App() {
   return (
-    <div className="App">
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src="/vite.svg" className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://reactjs.org" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </div>
-  )
+    <QueryClientProvider client={queryClient}>
+      <Example />
+    </QueryClientProvider>
+  );
 }
 
-export default App
+interface Download {
+  downloads: number;
+  day: string;
+}
+
+interface Datum {
+  package: string;
+  start: string;
+  end: string;
+  downloads: Download[];
+}
+
+function Example() {
+  const { isLoading, error, data } = useQuery(["momentData"], () =>
+    axios
+      .get("https://api.npmjs.org/downloads/range/last-month/moment")
+      .then((res) => res.data)
+  );
+
+  const series = React.useMemo(
+    () => [
+      {
+        label: "moment",
+
+        data: data?.downloads ?? [],
+      },
+    ],
+
+    [data]
+  );
+
+  const primaryAxis = React.useMemo(
+    (): AxisOptions<Download> => ({
+      getValue: (datum) => datum.day,
+    }),
+    []
+  );
+
+  const secondaryAxes = React.useMemo(
+    (): AxisOptions<Download>[] => [
+      {
+        getValue: (datum) => datum.downloads,
+      },
+    ],
+
+    []
+  );
+
+  if (isLoading) return "Loading...";
+
+  if (error) return "An error has occurred: " + error.message;
+
+  return (
+    <Chart
+      options={{
+        data: series,
+        primaryAxis,
+        secondaryAxes,
+      }}
+    />
+  );
+}
