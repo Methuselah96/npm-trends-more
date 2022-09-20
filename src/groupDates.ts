@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 import { Download } from "./PackageDownloads";
 
 export interface GroupedDownloads {
-  period: Date;
+  period: string;
   downloads: number;
 }
 
@@ -29,7 +29,7 @@ export const groupDownloadsByPeriod = (
   });
 
   return Object.entries(downloadsGroupedByPeriod).map(([key, value]) => ({
-    period: dayjs(key).toDate(),
+    period: dayjs(key).format("YYYY-MM-DD"),
     downloads: value as number,
   }));
 };
@@ -61,7 +61,7 @@ export const groupGroupedDownloadsByPeriod = (
   });
 
   const groupedDownloads = Object.entries(downloadsGroupedByPeriod).map(([key, value]) => ({
-    period: dayjs(key).toDate(),
+    period: dayjs(key).format("YYYY-MM-DD"),
     downloads: value as number,
   }));
   return groupedDownloads.slice(0, groupedDownloads.length - 1)

@@ -1,12 +1,12 @@
 import dayjs from "dayjs";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as React from "react";
 import {
   QueryClient,
   QueryClientProvider,
   useQuery,
 } from "@tanstack/react-query";
-import { AxisOptions, Chart } from "react-charts";
+import Chart from 'chart.js/auto';
 import {
   convertDownloadsToGrowth,
   groupDownloadsByPeriod,
@@ -44,7 +44,21 @@ function usePackageDownloads(
 
 const packageNames = ["moment", "date-fns", "dayjs", "luxon"];
 
+const colors = [
+  [0, 116, 217],
+  [255, 133, 27],
+  [46, 204, 64],
+  [255, 65, 54],
+  [255, 220, 0],
+  [127, 219, 255],
+  [177, 13, 201],
+  [57, 204, 204],
+  [0, 31, 63],
+  [1, 255, 112],
+];
+
 function Example(): JSX.Element | string {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [startDate, setStartDate] = useState(
     djsToStartDate(dayjs().subtract(74, "months"))
   );
@@ -60,51 +74,37 @@ function Example(): JSX.Element | string {
 
   const series = React.useMemo(
     () =>
-      data?.map((packageDownload) => ({
+      data?.map((packageDownload, index) => ({
         label: packageDownload.package,
         data: groupGroupedDownloadsByPeriod(convertDownloadsToGrowth(
           groupDownloadsByPeriod(packageDownload.downloads, "week")
         ), "month"),
+        borderColor: `rgba(${colors[index]},1)`,
       })) ?? [],
     [data]
   );
 
-  const primaryAxis = React.useMemo(
-    (): AxisOptions<GroupedDownloads> => ({
-      getValue: (datum) => datum.period,
-    }),
-    []
-  );
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
-  const secondaryAxes = React.useMemo(
-    (): AxisOptions<GroupedDownloads>[] => [
-      {
-        getValue: (datum) => datum.downloads,
-        elementType: "line",
-      },
-    ],
+    const config = {
+      type: 'line',
+      data: { datasets: series },
+      options: { parsing: { xAxisKey: 'period', yAxisKey: 'downloads' } }
+    };
 
-    []
-  );
+    const myChart = new Chart(
+      canvas,
+      config
+    );
+  }, [canvasRef.current, data]);
 
   if (isLoading) return "Loading...";
 
   if (error) return "An error has occurred: " + (error as Error).message;
 
   return (
-    <div
-      style={{
-        width: "1500px",
-        height: "750px",
-      }}
-    >
-      <Chart
-        options={{
-          data: series,
-          primaryAxis,
-          secondaryAxes,
-        }}
-      />
-    </div>
+    <canvas ref={canvasRef} />
   );
 }
